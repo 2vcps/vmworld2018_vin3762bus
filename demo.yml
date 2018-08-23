@@ -1,0 +1,73 @@
+---
+- hosts: Demo
+  remote_user: ubuntu
+  become: yes
+  tasks:
+  - name:    Install prerequisites
+    apt:     name={{item}} update_cache=yes
+    with_items:
+     - open-iscsi
+     - multipath-tools
+     - nfs-common
+     - apt-transport-https
+     - curl
+  - name: Add Google Apt key
+    apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+  - name:    Create directories
+    file:
+      path: "{{ item }}"
+      state: directory
+      mode: 0755
+    with_items:
+      - /etc/multipath
+  - name: Create a multipath.conf
+    file:
+      path: /etc/multipath.conf
+      state: touch
+      mode: 0755
+  - name: remove cloned iqn if it exists
+    lineinfile:
+      path: /etc/iscsi/initiatorname.iscsi
+      state: absent
+      regexp: 'InitiatorName=iqn.1993-08.org.debian:01:2639afbeb977'
+  - name: Create IQN
+    lineinfile:
+      dest: /etc/iscsi/initiatorname.iscsi
+      state: present
+      line: InitiatorName=iqn.1993-08.org.debian:01:{{ ansible_hostname }}
+  - name: remove 2nd default gw
+    lineinfile:
+      path: /etc/network/interfaces
+      state: absent
+      regexp: 'up route add default gw 192.168.230.1'
+  - name: remove old dns
+    lineinfile:
+      path: /etc/network/interfaces
+      state: absent
+      regexp: 'dns-nameservers	10.21.230.8 10.21.230.9'
+  - name: Create dns entry
+    lineinfile:
+      dest: /etc/network/interfaces
+      state: present 
+      line: 'dns-nameservers	10.21.230.6 10.21.230.7'
+  - name: copy kubernetes.list
+    copy:
+      src: ./kubernetes.list
+      dest: /etc/apt/sources.list.d/
+      mode: 0755
+  - name:    Install kube prerequisites
+    apt:     name={{item}} update_cache=yes
+    with_items:
+     - docker.io
+     - kubelet
+     - kubeadm
+     - kubectl
+  - name: Swapoff
+    raw: swapoff -a
+  - name: remove swap from fstab
+    lineinfile:
+      dest: /etc/fstab
+      regexp: '^/[\S]+\s+none\s+swap '
+      state: absent

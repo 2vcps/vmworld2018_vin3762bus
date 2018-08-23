@@ -1,0 +1,16 @@
+---
+- hosts: Demo
+  remote_user: ubuntu
+  become: yes
+  tasks:
+    - debug:
+        var: inventory_hostname
+    - name: Update cache
+      apt:
+       update_cache: yes
+       cache_valid_time: 3600
+    - name: Upgrades
+      apt:
+       name: "*"
+       state: latest
+       force_apt_get: yes

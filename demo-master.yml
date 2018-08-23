@@ -1,0 +1,11 @@
+- hosts: Demo-Master
+  remote_user: jowings
+  become: yes
+  tasks:
+  - name: Swapoff
+    raw: swapoff -a
+  - name: remove swap from fstab
+    lineinfile:
+      dest: /etc/fstab
+      regexp: '^/[\S]+\s+none\s+swap '
+      state: absent
